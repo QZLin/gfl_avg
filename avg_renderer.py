@@ -3,18 +3,26 @@ from re import search, sub
 CHAR_DEF = 'define %s = Character("%s")'
 
 
-def add_front(texts, sep_count=4, sep=' '):
-    string = ''
-    for x in texts.split('\n'):
-        string += sep * sep_count + x + '\n'
+def add_front(texts, sep_count=4, sep=' ', label_name=None):
+    # string = ''
+    # for x in texts.split('\n'):
+    #     string += sep * sep_count + x + '\n'
+    # return string
+    string = sep * sep_count + ('\n' + sep * sep_count).join(texts.split('\n'))
+    if label_name is not None:
+        string = 'label %s:\n' % label_name + string
     return string
 
 
-def render(source, chars=None):
+def render_chars(name_set):
+    return '\n'.join([CHAR_DEF % (x, x) for x in name_set])
+
+
+def render(source, names=None):
     avg_text = ''
 
-    if chars is None:
-        chars = set()
+    if names is None:
+        names = set()
 
     for line in source.split('\n'):
         head = line[:line.find(':')]
@@ -23,16 +31,17 @@ def render(source, chars=None):
         img_head = sub(r'<\S+?>.+?</\S+?>', '', head)
         img = r'\S+?\(\d+?\)'
 
-        char = search(r'(?<=<Speaker>).*(?=</Speaker>)', line)
-        char = char.group() if char is not None else ''
-        chars.add(char)
+        name = search(r'(?<=<Speaker>).*(?=</Speaker>)', line)
+        if name is not None:
+            names.add(name.group())
+        name = name.group() if name is not None else None
 
-        for t in text.split('+'):
-            if char == '':
-                avg_text += '\'%s\'\n' % t
-            elif t != '':
-                avg_text += '%s \'%s\'\n' % (char, t)
-    return add_front(avg_text)
+        for ltxt in text.split('+'):
+            if name is None:
+                avg_text += "'%s'\n" % ltxt
+            elif ltxt != '':
+                avg_text += "%s '%s'\n" % (name, ltxt)
+    return render_chars(names) + '\n' + add_front(avg_text, label_name='start')
 
 
 # class Renderer:
