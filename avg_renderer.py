@@ -1,6 +1,8 @@
 from re import search, sub
+from profiles import IMG
 
 CHAR_DEF = 'define %s = Character("%s")'
+SHOW_BG = 'scene %s'
 
 
 def add_front(texts, sep_count=4, sep=' ', label=None):
@@ -28,12 +30,18 @@ def render(source, label=None, names=None):
         # names = set()
         names = {}
 
-    for line in source.split('\n'):
+    lines = source.split('\n')
+    lines.remove('')
+    for line in lines:
         head = line[:line.find(':')]
         text = line[line.find(':') + 1:]
 
         img_head = sub(r'<\S+?>.+?</\S+?>', '', head)
         img = r'\S+?\(\d+?\)'
+
+        bg_m = search(r'(?<=<BIN>).+?(?=</BIN>)', head)
+        if bg_m is not None:
+            avg_text += SHOW_BG % IMG[int(bg_m.group().replace(' ', ''))] + '\n'
 
         name_r = search(r'(?<=<Speaker>).*(?=</Speaker>)', line)
         name = name_r.group() if name_r is not None else None
