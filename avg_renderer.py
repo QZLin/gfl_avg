@@ -36,7 +36,10 @@ def render(source, label=None, names=None):
         head = line[:line.find(':')]
         text = line[line.find(':') + 1:]
 
-        img_head = sub(r'<\S+?>.+?</\S+?>', '', head)
+        tag_head = head[head.find('||') + 2:]
+
+        char_head = head[:head.find('||')]
+        # char_head = sub(r'<\S+?>.+?</\S+?>', '', head)
         img = r'\S+?\(\d+?\)'
 
         bg_m = search(r'(?<=<BIN>).+?(?=</BIN>)', head)
@@ -74,7 +77,10 @@ def render(source, label=None, names=None):
 #
 #
 if __name__ == '__main__':
-    with open('avgtxt_main/1-2-2.bytes', 'r', encoding='utf-8') as file:
+    with open('avgtxt_main/1-1-2.bytes', 'r', encoding='utf-8') as file:
         s = file.read()
 
-    print(render(s, label='start'))
+    avg = render(s, label='start')
+    with open('avg.txt', 'w', encoding='utf-8') as file:
+        file.write(avg)
+    print(avg)
