@@ -2,21 +2,29 @@ import cv2
 from numpy import flipud
 from sys import argv
 
-if len(argv) < 2:
-    print('File Name needed...')
+# if len(argv) < 2:
+#     print('File Name needed...')
+#     exit()
+# img = cv2.imread(argv[1])
+img = cv2.imread(r'3X.png')
+cv2.imshow('', img)
+h, w, z = img.shape
+if h != 1024 or w != 1024:
+    print('Not 1024x1024 img')
     exit()
-img = cv2.imread(argv[1])
 
 
 def get_edge(corner, end=0, reverse=False):
     i = 0 if not reverse else end
+    add = 1
     if reverse:
         corner = flipud(corner)
+        add = -1
     for p in corner:
         x, y, z = p
         if x + y + z != 0:
             return i
-        i += 1 if not reverse else -1
+        i += add
     return None
 
 

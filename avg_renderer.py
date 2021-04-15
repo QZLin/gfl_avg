@@ -2,7 +2,8 @@ from re import search, sub
 from profiles import IMG
 
 CHAR_DEF = 'define %s = Character("%s")'
-SHOW_BG = 'scene %s'
+# SHOW_BG = 'scene %s'
+SHOW_BG = 'image %s = im.Scale(im.Crop("images/%s",(0,218,1024,578)),1280,720)\nscene %s\n'
 
 
 def add_front(texts, sep_count=4, sep=' ', label=None):
@@ -44,7 +45,10 @@ def render(source, label=None, names=None):
 
         bg_m = search(r'(?<=<BIN>).+?(?=</BIN>)', head)
         if bg_m is not None:
-            avg_text += SHOW_BG % IMG[int(bg_m.group().replace(' ', ''))] + '\n'
+            bg_t = IMG[int(bg_m.group().replace(' ', ''))]
+            bg_code = SHOW_BG % ('i_' + bg_t, bg_t + '.png', 'i_' + bg_t)
+            avg_text += bg_code
+            # avg_text += SHOW_BG % IMG[int(bg_m.group().replace(' ', ''))] + '\n'
 
         name_r = search(r'(?<=<Speaker>).*(?=</Speaker>)', line)
         name = name_r.group() if name_r is not None else None
