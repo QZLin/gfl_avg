@@ -34,7 +34,10 @@ def render(source, label=None, names=None):
         names = {}
 
     lines = source.split('\n')
-    lines.remove('')
+    try:
+        lines.remove('')
+    except ValueError:
+        pass
     for line in lines:
         head = line[:line.find(':')]
         text = line[line.find(':') + 1:]
@@ -48,14 +51,15 @@ def render(source, label=None, names=None):
         bg_m = search(r'(?<=<BIN>).+?(?=</BIN>)', head)
         if bg_m is not None:
             bg_t = IMG[int(bg_m.group().replace(' ', ''))]
-            bg_code = SHOW_BG % ('i_' + bg_t, bg_t + '.png', 'i_' + bg_t)
+            bg_code_name = 'i_' + bg_t.replace('-', '_').replace('.', '_').replace(' ', '_')
+            bg_code = SHOW_BG % (bg_code_name, bg_t + '.png', bg_code_name)
             avg_text += bg_code
             # avg_text += SHOW_BG % IMG[int(bg_m.group().replace(' ', ''))] + '\n'
 
         name_r = search(r'(?<=<Speaker>).*(?=</Speaker>)', line)
         name = name_r.group() if name_r is not None else None
 
-        if name is not None:
+        if name is not None and name != '':
             if name not in names.keys():
                 code_name = name.replace('-', '_').replace(' ', '_')
                 names[name] = code_name
@@ -64,7 +68,7 @@ def render(source, label=None, names=None):
         # name = name.group() if name is not None else None
 
         for ltxt in text.split('+'):
-            if name is None:
+            if name is None or name == '':
                 avg_text += "'%s'\n" % ltxt
             elif ltxt != '':
                 avg_text += "%s '%s'\n" % (names[name], ltxt)
@@ -83,11 +87,27 @@ def render(source, label=None, names=None):
 #
 #
 if __name__ == '__main__':
-    level = '1-4-1'
-    with open('avgtxt_main/%s.bytes' % level, 'r', encoding='utf-8') as file:
-        s = file.read()
+    with open('rpy/main.rpy', 'w') as f:
+        pass
+    for x in range(1, 13):
+        for y in range(1, 7):
+            for z in range(1, 3):
+                level = '%d-%d-%d' % (x, y, z)
+                with open('avgtxt_main/%s.bytes' % level, 'r', encoding='utf-8') as file:
+                    s = file.read()
 
-    avg = render(s, label='s' + level.replace('-', '_'))
-    with open('rpy/%s.rpy' % level.replace('-', '_'), 'w', encoding='utf-8') as file:
-        file.write(avg)
-    print(avg)
+                avg = render(s, label='s' + level.replace('-', '_'))
+                with open('rpy/%s.rpy' % level.replace('-', '_'), 'w', encoding='utf-8') as file:
+                    file.write(avg)
+                print(avg)
+                with open('rpy/main.rpy', 'a+') as f:
+                    f.write('    call s' + level.replace('-', '_') + '\n')
+# if __name__ == '__main__':
+#     level = '1-4-1'
+#     with open('avgtxt_main/%s.bytes' % level, 'r', encoding='utf-8') as file:
+#         s = file.read()
+#
+#     avg = render(s, label='s' + level.replace('-', '_'))
+#     with open('rpy/%s.rpy' % level.replace('-', '_'), 'w', encoding='utf-8') as file:
+#         file.write(avg)
+#     print(avg)
