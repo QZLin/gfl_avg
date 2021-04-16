@@ -2,11 +2,11 @@ import cv2
 from numpy import flipud
 from sys import argv
 
-# if len(argv) < 2:
-#     print('File Name needed...')
-#     exit()
-# img = cv2.imread(argv[1])
-img = cv2.imread(r'3X.png')
+if len(argv) < 2:
+    print('File Name needed...')
+    exit()
+img = cv2.imread(argv[1])
+# img = cv2.imread(r'3X.png')
 cv2.imshow('', img)
 h, w, z = img.shape
 if h != 1024 or w != 1024:

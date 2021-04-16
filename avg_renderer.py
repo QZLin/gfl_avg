@@ -11,6 +11,8 @@ def add_front(texts, sep_count=4, sep=' ', label=None):
     # for x in texts.split('\n'):
     #     string += sep * sep_count + x + '\n'
     # return string
+    if label is not None:
+        texts += 'return\n'
     string = sep * sep_count + ('\n' + sep * sep_count).join(texts.split('\n'))
     if label is not None:
         string = 'label %s:\n' % label + string
@@ -81,10 +83,11 @@ def render(source, label=None, names=None):
 #
 #
 if __name__ == '__main__':
-    with open('avgtxt_main/1-1-2.bytes', 'r', encoding='utf-8') as file:
+    level = '1-4-1'
+    with open('avgtxt_main/%s.bytes' % level, 'r', encoding='utf-8') as file:
         s = file.read()
 
-    avg = render(s, label='start')
-    with open('avg.txt', 'w', encoding='utf-8') as file:
+    avg = render(s, label='s' + level.replace('-', '_'))
+    with open('rpy/%s.rpy' % level.replace('-', '_'), 'w', encoding='utf-8') as file:
         file.write(avg)
     print(avg)
