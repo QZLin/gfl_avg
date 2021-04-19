@@ -1,5 +1,7 @@
 rpy/*
 debug/*
+!debug/.gitkeep
+!rpy/.gitkeep
 profiles.py
 .idea
 
