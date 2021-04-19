@@ -43,12 +43,13 @@ def render_chars(name_dict):
     return '\n'.join([CHAR_DEF % (name_dict[x], x) for x in name_dict.keys()])
 
 
+debug_sound_fx = set()
 debug_bgm = set()
 debug_chars = set()
 
 
 def render(source, label=None, names=None):
-    avg_text = ''
+    avg_text = 'stop sound\n'
     # debug
     if label is not None:
         avg_text += "'" + label + "'\n"
@@ -74,13 +75,14 @@ def render(source, label=None, names=None):
         if bgm_result is not None:
             bgm = bgm_result.group()
             debug_bgm.add(bgm)
-            # avg_text += BGM % (bgm + '.wav') + '\n'
+            avg_text += BGM % (bgm + '.wav') + '\n'
 
         # Sound FX
         sound_fx_result = search(r'(?<=<SE1>).+?(?=</SE1>)', tag_head)
         if sound_fx_result is not None:
             sound_fx = sound_fx_result.group()
             avg_text += SOUND_FX % (sound_fx + '.wav') + '\n'
+            debug_sound_fx.add(sound_fx)
 
         # Character
         # char_head = sub(r'<\S+?>.+?</\S+?>', '', head)
@@ -105,6 +107,7 @@ def render(source, label=None, names=None):
             elif name not in names.keys():
                 code_name = to_code(name)
                 names[name] = code_name
+                debug_chars.add(name)
 
         # text
         for text_unit in text.split('+'):
@@ -154,6 +157,11 @@ if __name__ == '__main__':
 
     with open('debug/bgm.txt', 'w') as f:
         f.write('\n'.join(debug_bgm))
+
+    with open('debug/sound_fx.txt', 'w') as f:
+        f.write('\n'.join(debug_sound_fx))
+    with open('debug/chars.txt', 'w', encoding='utf-8') as f:
+        f.write('\n'.join(debug_chars))
 # if __name__ == '__main__':
 #     level = '1-4-1'
 #     with open('avgtxt_main/%s.bytes' % level, 'r', encoding='utf-8') as file:
