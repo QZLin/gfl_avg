@@ -45,7 +45,7 @@ def render_chars(name_dict):
 
 debug_sound_fx = set()
 debug_bgm = set()
-debug_chars = set()
+debug_names = set()
 
 
 def render(source, label=None, names=None):
@@ -58,9 +58,17 @@ def render(source, label=None, names=None):
         # names = set()
         names = {}
 
+    # color tag
+    source = sub(r'<(?=color=#)', '{', source)
+    source = sub(r'(?<=color=#\S\S\S\S\S\S)>', '}', source)
+    source = sub(r'<(?=/color)', '{', source)
+    source = sub(r'(?<=/color)>', '}', source)
+    # if source.find('color') != -1:
+    #     print()
     lines = source.split('\n')
     if '' in lines:
         lines.remove('')
+
     for line in lines:
         # NPC-Kalin(1)<Speaker>格琳</Speaker>||:“选择我们，加入我们！格里芬私人军事承包商，更新世界的锋芒！”+没错，从今天开始，您就是格里芬旗下的战术指挥官啦！
 
@@ -107,14 +115,9 @@ def render(source, label=None, names=None):
             elif name not in names.keys():
                 code_name = to_code(name)
                 names[name] = code_name
-                debug_chars.add(name)
+                debug_names.add(name)
 
         # text
-        source = sub(r'<(?=color=#)', '{', source)
-        source = sub(r'(?<=color=#\S\S\S\S\S\S)>', '}', source)
-        source = sub(r'<(?=/color)', '{', source)
-        source = sub(r'(?<=/color)>', '}', source)
-
         for text_unit in text.split('+'):
             if name is None:
                 avg_text += '\'' + text_unit + '\'\n'
@@ -165,8 +168,8 @@ if __name__ == '__main__':
 
     with open('debug/sound_fx.txt', 'w') as f:
         f.write('\n'.join(debug_sound_fx))
-    with open('debug/chars.txt', 'w', encoding='utf-8') as f:
-        f.write('\n'.join(debug_chars))
+    with open('debug/names.txt', 'w', encoding='utf-8') as f:
+        f.write('\n'.join(debug_names))
 # if __name__ == '__main__':
 #     level = '1-4-1'
 #     with open('avgtxt_main/%s.bytes' % level, 'r', encoding='utf-8') as file:
