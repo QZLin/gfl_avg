@@ -110,6 +110,11 @@ def render(source, label=None, names=None):
                 debug_chars.add(name)
 
         # text
+        source = sub(r'<(?=color=#)', '{', source)
+        source = sub(r'(?<=color=#\S\S\S\S\S\S)>', '}', source)
+        source = sub(r'<(?=/color)', '{', source)
+        source = sub(r'(?<=/color)>', '}', source)
+
         for text_unit in text.split('+'):
             if name is None:
                 avg_text += '\'' + text_unit + '\'\n'
