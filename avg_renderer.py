@@ -50,6 +50,7 @@ def render_chars(name_dict):
 debug_sound_fx = set()
 debug_bgm = set()
 debug_names = set()
+debug_chars = set()
 
 
 def render(source, label=None, names=None):
@@ -97,8 +98,16 @@ def render(source, label=None, names=None):
             debug_sound_fx.add(sound_fx)
 
         # Character
-        # char_head = sub(r'<\S+?>.+?</\S+?>', '', head)
-        img = r'\S+?\(\d+?\)'
+        char_head = sub(r'<\S+?>.+?</\S+?>', '', char_head)
+        char_head = sub(r'<\S+?>', '', char_head)
+        char_list = char_head.split(';')
+        if '()' in char_list:
+            char_list.remove('()')
+        # if len(char_list) > 1:
+        #     print()
+        for char in char_list:
+            debug_chars.add(char)
+        # img = r'\S+?\(\d+?\)'
 
         # Background
         bg_result = search(r'(?<=<BIN>).+?(?=</BIN>)', head)
@@ -169,11 +178,12 @@ if __name__ == '__main__':
 
     with open('debug/bgm.txt', 'w') as f:
         f.write('\n'.join(debug_bgm))
-
     with open('debug/sound_fx.txt', 'w') as f:
         f.write('\n'.join(debug_sound_fx))
     with open('debug/names.txt', 'w', encoding='utf-8') as f:
         f.write('\n'.join(debug_names))
+    with open('debug/chars.txt', 'w', encoding='utf-8') as f:
+        f.write('\n'.join(debug_chars))
 # if __name__ == '__main__':
 #     level = '1-4-1'
 #     with open('avgtxt_main/%s.bytes' % level, 'r', encoding='utf-8') as file:
