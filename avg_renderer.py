@@ -1,12 +1,16 @@
-from re import search, sub, match
+from re import search, sub, match, compile
 from profiles import IMG
 
 CHAR_DEF = 'define %s = Character("%s")'
 SOUND_FX = 'play sound \'audio/%s\''
 BGM = 'play music \'bgm/%s\''
 
-
 # SHOW_BG = 'image %s = im.Scale(im.Crop("images/%s",(0,218,1024,578)),1280,720)\nscene %s\n'
+color_pa0 = compile(r'<(?=color=#)')
+color_pa1 = compile(r'(?<=color=#\S\S\S\S\S\S)>')
+color_pb0 = compile(r'<(?=/color)')
+color_pb1 = compile(r'(?<=/color)>')
+
 
 def is_codename(name):
     if len(name) == 0:
@@ -59,10 +63,10 @@ def render(source, label=None, names=None):
         names = {}
 
     # color tag
-    source = sub(r'<(?=color=#)', '{', source)
-    source = sub(r'(?<=color=#\S\S\S\S\S\S)>', '}', source)
-    source = sub(r'<(?=/color)', '{', source)
-    source = sub(r'(?<=/color)>', '}', source)
+    source = sub(color_pa0, '{', source)
+    source = sub(color_pa1, '}', source)
+    source = sub(color_pb0, '{', source)
+    source = sub(color_pb1, '}', source)
     # if source.find('color') != -1:
     #     print()
     lines = source.split('\n')
