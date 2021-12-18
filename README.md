@@ -14,6 +14,10 @@ Parse GFL avg to Ren'Py format
 
 `avg_parser.py`
 
+## Requirements
+
+[cvtool](https://github.com/qzlin/cvtool)
+
 ## Ren'Py
 
 [Ren'Py](https://renpy.org/)
