@@ -1,3 +1,4 @@
+tool/config.py
 rpy/*
 debug/*
 !debug/.gitkeep

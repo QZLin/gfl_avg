@@ -1,8 +1,10 @@
 from os import walk
 
+import tool.config as config
+
 
 def check_bgm(path):
-    with open('debug/bgm.txt', 'r', encoding='utf-8') as file:
+    with open('../debug/bgm.txt', 'r', encoding='utf-8') as file:
         bgm = file.read().split('\n')
     exist_bgm = []
     for root, dirs, files in walk(path):
@@ -15,4 +17,9 @@ def check_bgm(path):
             print(x)
 
 
-check_bgm(r'D:\renprj\girlsfrontline\game\bgm')
+def check_background(path):
+    pass
+
+
+if __name__ == '__main__':
+    check_bgm(config.RENPY_BGM)

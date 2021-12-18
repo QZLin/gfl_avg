@@ -21,8 +21,8 @@ def get_edge(corner, end=0, reverse=False):
         corner = flipud(corner)
         add = -1
     for p in corner:
-        x, y, z = p
-        if x + y + z != 0:
+        x, y, z_ = p
+        if x + y + z_ != 0:
             return i
         i += add
     return None
