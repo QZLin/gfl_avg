@@ -4,9 +4,9 @@ param(
 
 $current_path = Get-Location
 
-cd $target_path
+Set-Location $target_path
 Write-Output "Clean '*.rpyc','*.rpyc.bak' for $target_path"
-rm ./*.rpyc
-rm ./*.rpyc.bak
+Remove-Item ./*.rpyc
+Remove-Item ./*.rpyc.bak
 
-cd $current_path
+Set-Location $current_path
