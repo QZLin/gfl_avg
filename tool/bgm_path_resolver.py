@@ -1,10 +1,12 @@
-import cvtool.no_path_asset as npa
+import cvtool
 
 import tool.config as config
 
-np = npa.NPAssets(config.RENPY_PROJECT, relpath=True,
-                  relroot=config.RENPY_GAME)
-np.build_library()
+pl = cvtool.pla.PLAsset(config.RENPY_PROJECT, rel_root=config.RENPY_GAME, path_sep='/')
+pl.build_library()
 
-UI_ObjDown = np.fpath('UI_ObjDown.wav').replace('\\', '/')
-print(np.library)
+UI_ObjDown = pl.fpath('UI_ObjDown.wav')
+
+if __name__ == "__main__":
+    print(pl.library)
+    print(UI_ObjDown)

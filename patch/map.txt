@@ -1,3 +1,4 @@
+# Use path.py instead
 BGM_Sunshine.wav=home_formation_factory.wav
 BGM_Wake.wav=GF_Emotional_Normal_loop.wav
 GF_EV3_Bingocard_loop.wav=GF_Bingocard_loop.wav

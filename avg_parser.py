@@ -52,10 +52,9 @@ def set_append(value, list_: list):
         list_.append(value)
 
 
-def parser(source, label=None, names=None):
+def parser(source, label=None, names=None, debug=False):
     avg_text = 'stop sound\n'
-    # debug
-    if label is not None:
+    if label is not None and debug:
         avg_text += f"'{label.replace('s', '').replace('_', '-')}'\n"
 
     if names is None:
@@ -78,7 +77,7 @@ def parser(source, label=None, names=None):
         if 'BGM' in tags.keys():
             bgm = search(r'(?<=<BGM>).+?(?=</BGM>)', tags['BGM']).group()
             bgm = patch.bgm_patcher(bgm)
-            if (path := tool.bgm_path_resolver.np.fpath(bgm + '.wav')) is None:
+            if (path := tool.bgm_path_resolver.pl.fpath(bgm + '.wav')) is None:
                 path = 'musiclost.flac'
                 set_append(f'LOST: {bgm}', debug_bgm)
             else:
@@ -172,7 +171,7 @@ if __name__ == '__main__':
             s = file.read()
 
         label_name = 's' + file_name.replace('-', '_')
-        avg = parser(s, label=label_name)
+        avg = parser(s, label=label_name,debug=True)
         with open(f'rpy/{label_name}.rpy', 'w', encoding='utf-8') as file:
             file.write(avg)
         print(avg)
