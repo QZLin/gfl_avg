@@ -1,3 +1,4 @@
+import keyword
 import re
 from re import search, match
 
