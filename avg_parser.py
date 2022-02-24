@@ -16,10 +16,10 @@ def is_codename(name):  # TODO
 
 
 def to_codename(origin_name):
-    illegal = [' ', '-', '.']
-    for x in illegal:
-        origin_name = origin_name.replace(x, '_')
-    return origin_name
+    name = re.sub(r'[\\ ~#%&*{}/:;<>?|"\-\[\]\']', "_", origin_name)
+    if keyword.iskeyword(name) or name in dir(__builtins__):
+        name = f'{name}_{abs(hash(origin_name))}'
+    return name
 
 
 def show_bg(file_name, codename):
