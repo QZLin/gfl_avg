@@ -1,37 +1,25 @@
-import cv2
-from numpy import flipud
-from sys import argv
+from os import fdopen
 
-if len(argv) < 2:
-    print('File Name needed...')
-    exit()
-img = cv2.imread(argv[1])
-# img = cv2.imread(r'3X.png')
-cv2.imshow('', img)
-h, w, z = img.shape
-if h != 1024 or w != 1024:
-    print('Not 1024x1024 img')
-    exit()
+import argparse
+import cv2.cv2 as cv
+from sys import stdout
 
+import cvtool
 
-def get_edge(corner, end=0, reverse=False):
-    i = 0 if not reverse else end
-    add = 1
-    if reverse:
-        corner = flipud(corner)
-        add = -1
-    for p in corner:
-        x, y, z_ = p
-        if x + y + z_ != 0:
-            return i
-        i += add
-    return None
+parser = argparse.ArgumentParser()
+parser.add_argument('image')
+parser.add_argument('-f', '--file', action='store_true')
+parser.add_argument('-o', '--output', type=str)
+args = parser.parse_args()
+# print(args.image)
 
+img = cvtool.im.sim_screen_crop((1280, 720), cvtool.im.uimread(args.image))
+# cvtool.im.test_img(img)
+out = cv.imencode('.png', img)[1]
 
-edge_u = get_edge(img[0:512, 512])
-edge_d = get_edge(img[512:1024, 512], 1024, True)
-print(edge_u, edge_d)
-
-cv2.imwrite(argv[1], img[edge_u:edge_d])
-# cv2.imshow('cut', img[edge_u:edge_d])
-# cv2.waitKey()
+if args.file:
+    cvtool.im.uimwrite(args.output, '.png', img)
+else:
+    with fdopen(stdout.fileno(), "wb", ) as stdout:
+        stdout.write(out)
+        stdout.flush()

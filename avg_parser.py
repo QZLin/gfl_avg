@@ -17,15 +17,20 @@ def is_codename(name):  # TODO
 
 
 def to_codename(origin_name):
-    name = re.sub(r'[\\ ~#%&*{}/:;<>?|"\-\[\]\']', "_", origin_name)
+    name = re.sub(r'[\\ ~#%&*.{}/:;()<>?|"\-\[\]\']', "_", origin_name)
     if keyword.iskeyword(name) or name in dir(__builtins__):
         name = f'{name}_{abs(hash(origin_name))}'
     return name
 
 
 def show_bg(file_name, codename):
-    return f'image {codename} = im.Scale(im.Crop("images/{file_name}",(0,218,1024,578)),1280,720)\n' \
+    return f'image {codename} = "images/{file_name}"\n' \
            f'scene {codename}\n'
+    # return f'image {codename} = im.Scale(im.Crop("images/{file_name}",(0,218,1024,578)),1280,720)\n' \
+    #        f'scene {codename}\n'
+    # if file_name[-4:] == '.png':
+    #     file_name = file_name[:-4]
+    # return f'scene {file_name}\n'
 
 
 def add_indentation(texts, sep_count=4, sep=' ', label=None):
@@ -172,7 +177,7 @@ if __name__ == '__main__':
             s = file.read()
 
         label_name = 's' + file_name.replace('-', '_')
-        avg = parser(s, label=label_name,debug=True)
+        avg = parser(s, label=label_name, debug=True)
         with open(f'rpy/{label_name}.rpy', 'w', encoding='utf-8') as file:
             file.write(avg)
         print(avg)
