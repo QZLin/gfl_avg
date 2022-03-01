@@ -17,7 +17,7 @@ Get-ChildItem $image_path -Filter "*.png" | ForEach-Object {
     # (./tool/Invoke-BinaryProcess.ps1 python.exe -Output -ArgumentList "tool/avg_bg_handle.py", $_.FullName))
     Write-Output $_.Name
     $st = $sw.ElapsedMilliseconds
-    python "tool/avg_bg_handle.py" $_.FullName -f (Join-Path $target_path $_.Name)
+    python "tool/avg_bg_handle.py" $_.FullName -f (Join-Path $target_path $_.Name) -c 8
     Write-Output "$(($sw.ElapsedMilliseconds-$st)/1000)s"
 }
 $sw.Stop()
