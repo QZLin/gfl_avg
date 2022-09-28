@@ -5,6 +5,7 @@ from re import search, match
 import patch
 import tool.bgm_path_resolver
 from profiles import IMG  # !!!Run profiles_gen.py once to generate profiles.py
+import ast_rpy as ast
 
 
 def is_codename(name):  # TODO
@@ -70,6 +71,8 @@ def parser(source, label=None, names=None, debug=False):
     if '' in lines:
         lines.remove('')
 
+    ast_map = []
+    ast_map.append(ast.Statement(['stop', 'sound']))
     for line in lines:
         # NPC-Kalin(1)<Speaker>格琳</Speaker>||:“选择我们，加入我们！格里芬私人军事承包商，更新世界的锋芒！”+没错，从今天开始，您就是格里芬旗下的战术指挥官啦！
 
@@ -78,24 +81,43 @@ def parser(source, label=None, names=None, debug=False):
 
         tag_head = head[head.find('||') + 2:]
 
-        tags = {x.groups()[0]: x.group() for x in re.finditer('<(\\S+?)>.+?</\\1>', head)}
-        # BGM
-        if 'BGM' in tags.keys():
-            bgm = search(r'(?<=<BGM>).+?(?=</BGM>)', tags['BGM']).group()
-            bgm = patch.bgm_patcher(bgm)
-            if (path := tool.bgm_path_resolver.pl.fpath(bgm + '.wav')) is None:
-                path = 'musiclost.flac'
-                set_append(f'LOST: {bgm}', debug_bgm)
-            else:
-                path = path.replace('\\', '/')
-                set_append(path, debug_bgm)
-            avg_text += f'play music \'{path}\'\n'
+        name = None
 
-        # Sound FX
-        if 'SE1' in tags.keys():
-            sound_fx = search(r'(?<=<SE1>).+?(?=</SE1>)', tags['SE1']).group()
-            avg_text += f"play sound 'audio/{sound_fx}.wav'\n"
-            set_append(sound_fx, debug_sound_fx)
+        tags = [{'key': x.groups()[0], 'value': x.groups()[1]} for x in re.finditer('<(\\S+?)>(.+?)</\\1>', head)]
+        for tag in tags:
+            match tag['key']:
+                case 'BGM':
+                    bgm = patch.bgm_patcher(tag['value'])
+                    if (path := tool.bgm_path_resolver.pl.fpath(bgm + '.wav')) is None:
+                        path = 'musiclost.flac'
+                        set_append(f'LOST: {bgm}', debug_bgm)
+                    else:
+                        path = path.replace('\\', '/')
+                        set_append(path, debug_bgm)
+                    avg_text += f'play music \'{path}\'\n'
+                    ast_map.append(ast.Statement(['play', 'music'], path))
+                case 'BIN':
+                    bg_result = tag['value']
+                    bg_img = IMG[int(bg_result.replace(' ', ''))]
+                    bg_code_name = f'i_{to_codename(bg_img)}'
+                    # bg_render = SHOW_BG % (bg_code_name, bg_img + '.png', bg_code_name)
+                    avg_text += show_bg(bg_img + '.png', bg_code_name)
+                    ast_map.append(ast.Statement(['scene'], bg_code_name))
+                case 'SE1':
+                    sound_fx = tag['value']
+                    avg_text += f"play sound 'audio/{sound_fx}.wav'\n"
+                    set_append(sound_fx, debug_sound_fx)
+                    ast_map.append(ast.Statement(['play', 'sound'], sound_fx))
+
+                case 'Speaker':
+                    name = tag['value']
+                    if name == '':
+                        name = None
+                    elif name not in names.keys():
+                        code_name = to_codename(name)
+                        names[name] = code_name
+                        set_append(name, debug_names)
+                        ast_map.insert(0, ast.Assign(code_name, 'define', [ast.Func('Character', [name])]))
 
         # Character # TODO
         char_head = head[:head.find('||')]
@@ -112,30 +134,6 @@ def parser(source, label=None, names=None, debug=False):
             set_append(char, debug_chars)
         # img = r'\S+?\(\d+?\)'
 
-        # Background
-        if 'BIN' in tags.keys():
-            bg_result = search(r'(?<=<BIN>).+?(?=</BIN>)', tags['BIN'])
-            bg_img = IMG[int(bg_result.group().replace(' ', ''))]
-            bg_code_name = f'i_{to_codename(bg_img)}'
-            # bg_render = SHOW_BG % (bg_code_name, bg_img + '.png', bg_code_name)
-            avg_text += show_bg(bg_img + '.png', bg_code_name)
-
-        # Name
-        # name_result = search(r'(?<=<Speaker>).*(?=</Speaker>)', line)
-        # name = name_result.group() if name_result is not None else None
-        if 'Speaker' in tags.keys():
-            name_result = tags['Speaker']
-            name = search(r'<Speaker>(.*)</Speaker>', name_result).groups()[0]
-            name = name.replace(' ', '')
-            if name == '':
-                name = None
-            elif name not in names.keys():
-                code_name = to_codename(name)
-                names[name] = code_name
-                set_append(name, debug_names)
-        else:
-            name = None
-
         # Convert color tag
         if re.search('<(color)=#\\S+?>(.*?)</\\1>', text):
             for r in re.finditer('<color=#(\\S+?)>', text):
@@ -149,18 +147,23 @@ def parser(source, label=None, names=None, debug=False):
                 current_chars = ';'.join([f'{k}:{chars[k]}' for k in chars.keys()])
                 if current_chars != last_chars:
                     for char in chars:
+                        ast_map.append(ast.Statement(['show', f'{to_codename(char)}_{chars[char]}']))
                         avg_text += f'show {to_codename(char)}_{chars[char]}\n'
                     last_chars = current_chars
             else:
                 last_chars = ''
             if name is None:
+                ast_map.append(ast.Text(text_unit))
                 avg_text += f"'{text_unit}'\n"
                 avg_text += f"play sound '{tool.bgm_path_resolver.UI_ObjDown}'\n"
             elif text_unit != '':
+                ast_map.append(ast.Text(text_unit, name=names[name]))
                 avg_text += f"{names[name]} '{text_unit}'\n"
                 avg_text += f"play sound '{tool.bgm_path_resolver.UI_ObjDown}'\n"
             elif text_unit == '':
+                ast_map.append(ast.Text(text_unit))
                 avg_text += "''\n"
+    txt = ast.ast2rpy(ast_map)
     return char_define(names) + '\n' + add_indentation(avg_text, label=label)
 
 
