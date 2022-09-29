@@ -1,20 +1,16 @@
-import enum
-
 INTEND_TYPE = ' '
 INTEND_COUNT = 4
-
+import json
+json.s
 
 class Element:
-    child = None
     name = None
     value = None
-    intend = 0
-
-    # def __init__(self, name, value, child, intend):
-    #     self.name = name
-    #     self.value = value
-    #     self.child = child
-    #     self.intend = intend
+    type = None
+    child = None
+    arg0 = None
+    arg1 = None
+    indent = 0
 
 
 class Text(Element):
@@ -33,61 +29,94 @@ class Assign(Element):
     def __init__(self, name, type_, child):
         self.name = name
         self.type = type_
-        if isinstance(child, Element):
-            self.child = [child]
-        else:
-            self.child = child
+        self.child = [child] if isinstance(child, Element) else child
 
 
 class Block(Element):
-    def __init_(self, name, child, intend):
+    def __init__(self, type_, name, child, indent=0):
+        self.type = type_
         self.name = name
         self.child = child
+        self.intend = indent
 
 
 class Func(Element):
     def __init__(self, name, child):
         self.name = name
-        if isinstance(child, Element):
-            self.child = [child]
-        else:
-            self.child = child
+        self.child = [child] if isinstance(child, Element) else child
 
 
 def raw_str(string):
     return f"'{string}'"
 
 
-def intend(level):
+def idt(level):
+    """
+    Spawn indent
+    :param level:
+    :return:
+    """
     if level is None:
         return ''
-    return INTEND_TYPE*INTEND_COUNT*level
+    return INTEND_TYPE * INTEND_COUNT * level
 
 
-def ast2rpy(ast_map: list):
-    if type(ast_map) == str:
-        return raw_str(ast_map)
-    if ast_map is None:
-        return ''
-    content = ''
+def ast2rpy(ast_map):
+    """
+    Normal AST parser
+    :param ast_map:
+    :return:
+    """
+    if type(ast_map) == Block:
+        return rpy_block(ast_map)
+    else:
+        return '\n'.join(_ast2rpy(x) for x in ast_map)
+
+
+def rpy_block(ast_map):
+    """
+    Block parser
+    :param ast_map:
+    :return:
+    """
+    rpy_script = ''
+    e = ast_map
+    rpy_script += f'{idt(e.indent)}{e.type} {e.name}:\n'
+    if e.child is not None:
+        for x in e.child:
+            x.indent += 1
+    rpy_script += ast2rpy(ast_map.child)
+    return rpy_script
+
+
+def _ast2rpy(ast_map: list):
+    """
+    AST parser for non newline elements
+    :param ast_map:
+    :return:
+    """
+    if isinstance(ast_map, Element):
+        ast_map = [ast_map]
+    else:
+        if ast_map is None:
+            return ''
+        if type(ast_map) == str:
+            return raw_str(ast_map)
+    rpy_script = ''
     for e in ast_map:
         tp = type(e)
         if tp == str:
             return raw_str(e)
         if tp == Statement:
-            content += f"{intend(e.intend)}{' '.join(e.name)} {e.value}\n"
+            rpy_script += f"{idt(e.indent)}{' '.join(e.name)}" + (f' {e.value}' if e.value else '')
         elif tp == Block:
-            content += f'{e.type} {e.name}:'
-            if e.child is not None:
-                for x in e.child:
-                    x.indend += INTEND_COUNT
-            content += ast2rpy(e.child)
+            if e.child:
+                rpy_script += rpy_block(e.child)
         elif tp == Text:
-            content += (f'{e.arg0} ' if e.arg0 else '') + \
-                intend + raw_str(e.value) + '\n'
+            rpy_script += idt(e.indent) + (f'{e.arg0} ' if e.arg0 else '') + raw_str(e.value)
         elif tp == Func:
-            content += f"{intend(e.intend)}{e.name}({ast2rpy(e.child)})\n"
+            rpy_script += f"{idt(e.indent)}{e.name}({_ast2rpy(e.child)})"
         elif tp == Assign:
-            content += f"{intend(e.intend)}{e.type} {e.name} = {ast2rpy(e.child)}\n"
+            rpy_script += f"{idt(e.indent)}{e.type} {e.name} = {_ast2rpy(e.child)}"
 
-    return content
+    return rpy_script
