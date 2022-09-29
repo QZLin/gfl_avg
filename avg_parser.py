@@ -71,8 +71,8 @@ def parser(source, label=None, names=None, debug=False):
     if '' in lines:
         lines.remove('')
 
-    ast_map = []
-    ast_map.append(ast.Statement(['stop', 'sound']))
+    ast_map = [ast.Statement(['stop', 'sound'])]
+    chardef_area = len(ast_map) - 1
     for line in lines:
         # NPC-Kalin(1)<Speaker>格琳</Speaker>||:“选择我们，加入我们！格里芬私人军事承包商，更新世界的锋芒！”+没错，从今天开始，您就是格里芬旗下的战术指挥官啦！
 
@@ -117,7 +117,8 @@ def parser(source, label=None, names=None, debug=False):
                         code_name = to_codename(name)
                         names[name] = code_name
                         set_append(name, debug_names)
-                        ast_map.insert(0, ast.Assign(code_name, 'define', [ast.Func('Character', [name])]))
+                        ast_map.insert(chardef_area, ast.Assign(code_name, 'define', [ast.Func('Character', (name,))]))
+                        chardef_area += 1
 
         # Character # TODO
         char_head = head[:head.find('||')]
@@ -163,9 +164,9 @@ def parser(source, label=None, names=None, debug=False):
             elif text_unit == '':
                 ast_map.append(ast.Text(text_unit))
                 avg_text += "''\n"
-    label = ast.Block('label',ast_map)
-    txt = ast.ast2rpy(label)
-    return char_define(names) + '\n' + add_indentation(avg_text, label=label)
+    # label = ast.Block('label', label, ast_map)
+    return ast.ast2rpy(ast.Block('label', label, ast_map))
+    # return char_define(names) + '\n' + add_indentation(avg_text, label=label)
 
 
 if __name__ == '__main__':

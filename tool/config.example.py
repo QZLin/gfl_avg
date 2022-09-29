@@ -1,6 +1,9 @@
-import os.path
+from os.path import join
 
-RENPY_PROJECT = r'C:/YourRenpyProjectPath'
+RENPY_PROJECT = r'C:/Your/RenpyProjectPath'
 
-RENPY_GAME = os.path.join(RENPY_PROJECT, 'game')
-RENPY_BGM = os.path.join(RENPY_GAME, 'bgm')
+RENPY_GAME = join(RENPY_PROJECT, 'game')
+RENPY_BGM = join(RENPY_GAME, 'bgm')
+
+AVG_BG_SOURCE = ''
+AVG_BG_TARGET = ''
