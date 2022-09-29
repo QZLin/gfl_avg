@@ -163,7 +163,8 @@ def parser(source, label=None, names=None, debug=False):
             elif text_unit == '':
                 ast_map.append(ast.Text(text_unit))
                 avg_text += "''\n"
-    txt = ast.ast2rpy(ast_map)
+    label = ast.Block('label',ast_map)
+    txt = ast.ast2rpy(label)
     return char_define(names) + '\n' + add_indentation(avg_text, label=label)
 
 

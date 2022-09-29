@@ -1,5 +1,8 @@
 import enum
 
+INTEND_TYPE = ' '
+INTEND_COUNT = 4
+
 
 class Element:
     child = None
@@ -37,7 +40,9 @@ class Assign(Element):
 
 
 class Block(Element):
-    pass
+    def __init_(self, name, child, intend):
+        self.name = name
+        self.child = child
 
 
 class Func(Element):
@@ -53,6 +58,12 @@ def raw_str(string):
     return f"'{string}'"
 
 
+def intend(level):
+    if level is None:
+        return ''
+    return INTEND_TYPE*INTEND_COUNT*level
+
+
 def ast2rpy(ast_map: list):
     if type(ast_map) == str:
         return raw_str(ast_map)
@@ -63,14 +74,20 @@ def ast2rpy(ast_map: list):
         tp = type(e)
         if tp == str:
             return raw_str(e)
-        intend = e.intend * ' '
         if tp == Statement:
-            content += intend + f"{' '.join(e.name)} {e.value}\n"
+            content += f"{intend(e.intend)}{' '.join(e.name)} {e.value}\n"
+        elif tp == Block:
+            content += f'{e.type} {e.name}:'
+            if e.child is not None:
+                for x in e.child:
+                    x.indend += INTEND_COUNT
+            content += ast2rpy(e.child)
         elif tp == Text:
-            content += (f'{e.arg0} ' if e.arg0 else '') + intend + raw_str(e.value) + '\n'
+            content += (f'{e.arg0} ' if e.arg0 else '') + \
+                intend + raw_str(e.value) + '\n'
         elif tp == Func:
-            content += e.intend * ' ' + f"{e.name}({ast2rpy(e.child)})\n"
+            content += f"{intend(e.intend)}{e.name}({ast2rpy(e.child)})\n"
         elif tp == Assign:
-            content += e.intend * ' ' + f"{e.type} {e.name} = {ast2rpy(e.child)}\n"
+            content += f"{intend(e.intend)}{e.type} {e.name} = {ast2rpy(e.child)}\n"
 
     return content
