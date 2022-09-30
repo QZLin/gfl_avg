@@ -1,6 +1,5 @@
 import keyword
 import re
-import uuid
 from re import search, match
 
 import patch
@@ -18,10 +17,14 @@ def is_codename(name):  # TODO
         return False
 
 
+codename_map = str.maketrans(m := r'\\ ~#%&*.{}/:;()<>?|"\-\[\]\'', '_' * len(m))
+
+
 def to_codename(origin_name: str):
     if origin_name.isspace():
         origin_name = f'SPACE_{origin_name.count(" ")}'
-    name = re.sub(r'[\\ ~#%&*.{}/:;()<>?|"\-\[\]\']', "_", origin_name)
+    # name = re.sub(r'[\\ ~#%&*.{}/:;()<>?|"\-\[\]\']', "_", origin_name)
+    name = origin_name.translate(codename_map)
     if keyword.iskeyword(name) or name in dir(__builtins__):
         name = f'{name}_{str(hash(origin_name)).replace("-", "_")}'
     return name
@@ -67,16 +70,15 @@ def parser(source, label=None, names=None, debug=False):
     if label is not None and debug:
         avg_text += f"'{label.replace('s', '').replace('_', '-')}'\n"
 
-    if names is None:
-        names = {}
-
-    lines = source.split('\n')
+    lines = source.splitlines()
     if '' in lines:
         lines.remove('')
+    if names is None:
+        names = {}
+    speaker_status = {}
 
     ast_map = [ast.Statement(['stop', 'sound'])]
     ast_top = []
-    chardef_area = len(ast_map) - 1
     for line in lines:
         # NPC-Kalin(1)<Speaker>格琳</Speaker>||:“选择我们，加入我们！格里芬私人军事承包商，更新世界的锋芒！”+没错，从今天开始，您就是格里芬旗下的战术指挥官啦！
 
@@ -87,8 +89,11 @@ def parser(source, label=None, names=None, debug=False):
 
         name = None
 
+        # Parse All tag by regex match
         tags = [{'key': x.groups()[0], 'value': x.groups()[1]} for x in re.finditer('<(\\S+?)>(.+?)</\\1>', head)]
         for tag in tags:
+            speakers = []
+
             match tag['key']:
                 case 'BGM':
                     bgm = patch.bgm_patcher(tag['value'])
@@ -100,6 +105,12 @@ def parser(source, label=None, names=None, debug=False):
                         set_append(path, debug_bgm)
                     avg_text += f'play music \'{path}\'\n'
                     ast_map.append(ast.Statement(['play', 'music'], ast.Str(path)))
+                case 'SE1':
+                    sound_fx = tag['value']
+                    avg_text += f"play sound 'audio/{sound_fx}.wav'\n"
+                    set_append(sound_fx, debug_sound_fx)
+                    path = f'audio/{sound_fx}.wav'
+                    ast_map.append(ast.Statement(['play', 'sound'], ast.Str(path)))
                 case 'BIN':
                     bg_result = tag['value']
                     bg_img = IMG[int(bg_result.replace(' ', ''))]
@@ -109,79 +120,73 @@ def parser(source, label=None, names=None, debug=False):
 
                     ast_map.append(ast.Assign(f'i_{to_codename(bg_img)}', 'image', f'images/{bg_img}.png'))
                     ast_map.append(ast.Statement(['scene'], bg_code_name))
-                case 'SE1':
-                    sound_fx = tag['value']
-                    avg_text += f"play sound 'audio/{sound_fx}.wav'\n"
-                    set_append(sound_fx, debug_sound_fx)
-                    path = f'audio/{sound_fx}.wav'
-                    ast_map.append(ast.Statement(['play', 'sound'], ast.Str(path)))
-
                 case 'Speaker':
                     name = tag['value']
-                    if name == '':
+                    if name.isspace():
                         name = None
                     elif name not in names.keys():
                         code_name = to_codename(name)
                         names[name] = code_name
                         set_append(name, debug_names)
+                        speakers.append(code_name)
                         ast_top.append(ast.Assign(code_name, 'define', ast.Func('Character', name)))
-
         # Character # TODO
-        char_head = head[:head.find('||')]
-        char_head = re.sub('<(\\S+?)>.+?</\\1>', '', char_head)
-        char_head = re.sub('<\\S+?>', '', char_head)
-        char_list = [x.strip() for x in char_head.split(';')]
-        chars = {}
-        for x in char_list:
-            if re.match('\\(\\S*\\)', x):
-                continue
-            r = re.search('(.*?)\\((\\d*?)\\)', x)
-            chars[r.groups()[0]] = r.groups()[1]
-        for char in char_list:
-            set_append(char, debug_chars)
+        # char_head = head[:head.find('||')]
+        # char_head = re.sub('<(\\S+?)>.+?</\\1>', '', char_head)
+        # char_head = re.sub('<\\S+?>', '', char_head)
+        # char_list = [x.strip() for x in char_head.split(';')]
+        # chars = {}
+        # for x in char_list:
+        #     if re.match('\\(\\S*\\)', x):
+        #         continue
+        #     r = re.search('(.*?)\\((\\d*?)\\)', x)
+        #     chars[r.groups()[0]] = r.groups()[1]
+        # for char in char_list:
+        #     set_append(char, debug_chars)
         # img = r'\S+?\(\d+?\)'
 
         # Convert color tag
-        if re.search('<(color)=#\\S+?>(.*?)</\\1>', text):
-            for r in re.finditer('<color=#(\\S+?)>', text):
-                text = text.replace(r.group(), f'{{color=#{r.groups()[0]}}}')
+        # if re.search('<(color)=#\\S+?>(.*?)</\\1>', text):
+        for r in re.finditer('<color=#(\\S+?)>', text):
+            text = text.replace(r.group(), f'{{color=#{r.groups()[0]}}}')
             text = text.replace('</color>', '{/color}')
 
         # Text
         last_chars = ''
         for text_unit in text.split('+'):
-            if len(chars.keys()) != 0:
-                current_chars = ';'.join([f'{k}:{chars[k]}' for k in chars.keys()])
-                if current_chars != last_chars:
-                    for char in chars:
-                        ast_map.append(ast.Statement(['show', f'{to_codename(char)}_{chars[char]}']))
-                        avg_text += f'show {to_codename(char)}_{chars[char]}\n'
-                    last_chars = current_chars
-            else:
-                last_chars = ''
-            if name is None:
+            # if len(chars.keys()) != 0:
+            #     current_chars = ';'.join([f'{k}:{v}' for k, v in chars.items()])
+            #     if current_chars != last_chars:
+            #         for char in chars:
+            #             ast_map.append(ast.Statement(['show', f'{to_codename(char)}_{chars[char]}']))
+            #             avg_text += f'show {to_codename(char)}_{chars[char]}\n'
+            #         last_chars = current_chars
+            # else:
+            #     last_chars = ''
+            if name is None or text_unit == '':
                 ast_map.append(ast.Text(text_unit))
                 avg_text += f"'{text_unit}'\n"
                 # avg_text += f"play sound '{tool.bgm_path_resolver.UI_ObjDown}'\n"
             elif text_unit != '':
-                ast_map.append(ast.Text(text_unit, name=names[name]))
+                ast_map.append(ast.Text(text_unit, character=names[name]))
                 avg_text += f"{names[name]} '{text_unit}'\n"
                 # avg_text += f"play sound '{tool.bgm_path_resolver.UI_ObjDown}'\n"
-            elif text_unit == '':
-                ast_map.append(ast.Text(text_unit))
-                avg_text += "''\n"
-    # label = ast.Block('label', label, ast_map)
+            # elif text_unit == '':
+            #     ast_map.append(ast.Text(text_unit))
+            #     avg_text += "''\n"
     ast_top.append(ast.Block('label', label, ast_map))
-    txt = ast.ast2rpy(ast_top)
-    return txt
+    result = ast.ast2rpy(ast_top)
+    return result
     # return char_define(names) + '\n' + add_indentation(avg_text, label=label)
 
 
 if __name__ == '__main__':
     # import time
     # t = time.time()
-    with open('rpy/script.rpy', 'w') as f:
-        f.write('label start:\n')
+    mp = ast.Block('label', 'start', calls := [])
+
+    # with open('rpy/script.rpy', 'w') as f:
+    #     f.write('label start:\n')
 
 
     def generate_avg_level(chapter, level, part):
@@ -194,8 +199,9 @@ if __name__ == '__main__':
         with open(f'rpy/{label_name}.rpy', 'w', encoding='utf-8') as file:
             file.write(avg)
         print(avg)
-        with open('rpy/script.rpy', 'a+') as file:
-            file.write(' ' * 4 + f'call {label_name}\n')
+        # with open('rpy/script.rpy', 'a+') as file:
+        #     file.write(' ' * 4 + f'call {label_name}\n')
+        calls.append(ast.Statement('call', label_name))
 
 
     # Chapter 1~12, level 1~6, part 1~2
@@ -208,6 +214,8 @@ if __name__ == '__main__':
                 ii = 1
                 if (i := i + 1) > 12:
                     break
+    with open('rpy/script.rpy', 'w') as f:
+        f.write(ast.ast2rpy(mp))
 
     # Write debug info
     with open('debug/bgm.txt', 'w') as f:
