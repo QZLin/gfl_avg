@@ -1,5 +1,6 @@
 import keyword
 import re
+import uuid
 from re import search, match
 
 import patch
@@ -17,10 +18,12 @@ def is_codename(name):  # TODO
         return False
 
 
-def to_codename(origin_name):
+def to_codename(origin_name: str):
+    if origin_name.isspace():
+        origin_name = f'SPACE_{origin_name.count(" ")}'
     name = re.sub(r'[\\ ~#%&*.{}/:;()<>?|"\-\[\]\']', "_", origin_name)
     if keyword.iskeyword(name) or name in dir(__builtins__):
-        name = f'{name}_{abs(hash(origin_name))}'
+        name = f'{name}_{str(hash(origin_name)).replace("-", "_")}'
     return name
 
 
@@ -72,6 +75,7 @@ def parser(source, label=None, names=None, debug=False):
         lines.remove('')
 
     ast_map = [ast.Statement(['stop', 'sound'])]
+    ast_top = []
     chardef_area = len(ast_map) - 1
     for line in lines:
         # NPC-Kalin(1)<Speaker>格琳</Speaker>||:“选择我们，加入我们！格里芬私人军事承包商，更新世界的锋芒！”+没错，从今天开始，您就是格里芬旗下的战术指挥官啦！
@@ -95,19 +99,22 @@ def parser(source, label=None, names=None, debug=False):
                         path = path.replace('\\', '/')
                         set_append(path, debug_bgm)
                     avg_text += f'play music \'{path}\'\n'
-                    ast_map.append(ast.Statement(['play', 'music'], path))
+                    ast_map.append(ast.Statement(['play', 'music'], ast.Str(path)))
                 case 'BIN':
                     bg_result = tag['value']
                     bg_img = IMG[int(bg_result.replace(' ', ''))]
                     bg_code_name = f'i_{to_codename(bg_img)}'
                     # bg_render = SHOW_BG % (bg_code_name, bg_img + '.png', bg_code_name)
                     avg_text += show_bg(bg_img + '.png', bg_code_name)
+
+                    ast_map.append(ast.Assign(f'i_{to_codename(bg_img)}', 'image', f'images/{bg_img}.png'))
                     ast_map.append(ast.Statement(['scene'], bg_code_name))
                 case 'SE1':
                     sound_fx = tag['value']
                     avg_text += f"play sound 'audio/{sound_fx}.wav'\n"
                     set_append(sound_fx, debug_sound_fx)
-                    ast_map.append(ast.Statement(['play', 'sound'], sound_fx))
+                    path = f'audio/{sound_fx}.wav'
+                    ast_map.append(ast.Statement(['play', 'sound'], ast.Str(path)))
 
                 case 'Speaker':
                     name = tag['value']
@@ -117,8 +124,7 @@ def parser(source, label=None, names=None, debug=False):
                         code_name = to_codename(name)
                         names[name] = code_name
                         set_append(name, debug_names)
-                        ast_map.insert(chardef_area, ast.Assign(code_name, 'define', [ast.Func('Character', (name,))]))
-                        chardef_area += 1
+                        ast_top.append(ast.Assign(code_name, 'define', ast.Func('Character', name)))
 
         # Character # TODO
         char_head = head[:head.find('||')]
@@ -156,16 +162,18 @@ def parser(source, label=None, names=None, debug=False):
             if name is None:
                 ast_map.append(ast.Text(text_unit))
                 avg_text += f"'{text_unit}'\n"
-                avg_text += f"play sound '{tool.bgm_path_resolver.UI_ObjDown}'\n"
+                # avg_text += f"play sound '{tool.bgm_path_resolver.UI_ObjDown}'\n"
             elif text_unit != '':
                 ast_map.append(ast.Text(text_unit, name=names[name]))
                 avg_text += f"{names[name]} '{text_unit}'\n"
-                avg_text += f"play sound '{tool.bgm_path_resolver.UI_ObjDown}'\n"
+                # avg_text += f"play sound '{tool.bgm_path_resolver.UI_ObjDown}'\n"
             elif text_unit == '':
                 ast_map.append(ast.Text(text_unit))
                 avg_text += "''\n"
     # label = ast.Block('label', label, ast_map)
-    return ast.ast2rpy(ast.Block('label', label, ast_map))
+    ast_top.append(ast.Block('label', label, ast_map))
+    txt = ast.ast2rpy(ast_top)
+    return txt
     # return char_define(names) + '\n' + add_indentation(avg_text, label=label)
 
 

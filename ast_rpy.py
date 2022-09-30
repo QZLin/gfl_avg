@@ -1,7 +1,6 @@
 INTEND_TYPE = ' '
 INTEND_COUNT = 4
-import json
-json.s
+
 
 class Element:
     name = None
@@ -13,10 +12,22 @@ class Element:
     indent = 0
 
 
+class Str(Element):
+    def __init__(self, value):
+        self.value = value if value is not None else ''
+
+    def __str__(self):
+        return raw_str(self.value)
+
+
 class Text(Element):
     def __init__(self, text, name=None):
         self.value = text
         self.arg0 = name
+
+
+def stmt(*e):
+    return ' '.join([str(x) for x in e if x is not None])
 
 
 class Statement(Element):
@@ -73,19 +84,18 @@ def ast2rpy(ast_map):
         return '\n'.join(_ast2rpy(x) for x in ast_map)
 
 
-def rpy_block(ast_map):
+def rpy_block(block):
     """
     Block parser
-    :param ast_map:
+    :param block:
     :return:
     """
     rpy_script = ''
-    e = ast_map
-    rpy_script += f'{idt(e.indent)}{e.type} {e.name}:\n'
-    if e.child is not None:
-        for x in e.child:
+    rpy_script += f'{idt(block.indent)}{block.type} {block.name}:\n'
+    if block.child is not None:
+        for x in block.child:
             x.indent += 1
-    rpy_script += ast2rpy(ast_map.child)
+    rpy_script += ast2rpy(block.child)
     return rpy_script
 
 
@@ -97,23 +107,23 @@ def _ast2rpy(ast_map: list):
     """
     if isinstance(ast_map, Element):
         ast_map = [ast_map]
-    else:
-        if ast_map is None:
-            return ''
-        if type(ast_map) == str:
-            return raw_str(ast_map)
+    elif ast_map is None:
+        return ''
+    elif type(ast_map) == str:
+        return raw_str(ast_map)
     rpy_script = ''
     for e in ast_map:
         tp = type(e)
-        if tp == str:
-            return raw_str(e)
         if tp == Statement:
-            rpy_script += f"{idt(e.indent)}{' '.join(e.name)}" + (f' {e.value}' if e.value else '')
+            rpy_script += stmt(f"{idt(e.indent)}{' '.join(e.name)}", e.value)
+            # rpy_script += f"{idt(e.indent)}{' '.join(e.name)}" + (f' {e.value}' if e.value else '')
+        elif tp == Str:
+            rpy_script += Str.value
         elif tp == Block:
             if e.child:
-                rpy_script += rpy_block(e.child)
+                rpy_script += rpy_block(e)
         elif tp == Text:
-            rpy_script += idt(e.indent) + (f'{e.arg0} ' if e.arg0 else '') + raw_str(e.value)
+            rpy_script += idt(e.indent) + stmt(e.arg0, raw_str(e.value))
         elif tp == Func:
             rpy_script += f"{idt(e.indent)}{e.name}({_ast2rpy(e.child)})"
         elif tp == Assign:
