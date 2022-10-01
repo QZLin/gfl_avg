@@ -84,7 +84,7 @@ def parser(source, label=None, names=None, debug_mode=False):
                         path = path.replace('\\', '/')
                         s_apd(path, debug_bgm)
                     ast_map.append(ast.Statement(['play', 'music'], ast.Str(path)))
-                case 'SE1', 'SE2':
+                case 'SE1' | 'SE2':
                     sound_fx = tag['value']
                     s_apd(sound_fx, debug_sound_fx)
                     path = f'audio/{sound_fx}.wav'
@@ -121,7 +121,7 @@ def parser(source, label=None, names=None, debug_mode=False):
                     pass
                 case '关闭蒙版':
                     pass
-                case '名单', '名单2':
+                case '名单' | '名单2':
                     pass
 
         # TODO Character Portrait
