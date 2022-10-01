@@ -30,46 +30,24 @@ def to_codename(origin_name: str):
     return name
 
 
-def show_bg(file_name, codename):
-    return f'image {codename} = "images/{file_name}"\n' \
-           f'scene {codename}\n'
-    # return f'image {codename} = im.Scale(im.Crop("images/{file_name}",(0,218,1024,578)),1280,720)\n' \
-    #        f'scene {codename}\n'
-    # if file_name[-4:] == '.png':
-    #     file_name = file_name[:-4]
-    # return f'scene {file_name}\n'
-
-
-def add_indentation(texts, sep_count=4, sep=' ', label=None):
-    if label is not None:
-        texts += 'return\n'
-    string = sep * sep_count + ('\n' + sep * sep_count).join(texts.split('\n'))
-    if label is not None:
-        string = 'label %s:\n' % label + string
-    return string
-
-
-def char_define(name_dict):
-    # return '\n'.join([CHAR_DEF % (name_dict[x], x) for x in name_dict.keys()])
-    return '\n'.join([f'define {name_dict[x]} = Character("{x}")' for x in name_dict.keys()]) + '\n'
-
-
 debug_sound_fx = []
 debug_bgm = []
 debug_names = []
 debug_chars = []
 
 
-def set_append(value, list_: list):
+def s_apd(value, list_: list):
+    """
+    Append value to list when not exist
+    :param value:
+    :param list_:
+    :return:
+    """
     if value not in list_:
         list_.append(value)
 
 
-def parser(source, label=None, names=None, debug=False):
-    avg_text = 'stop sound\n'
-    if label is not None and debug:
-        avg_text += f"'{label.replace('s', '').replace('_', '-')}'\n"
-
+def parser(source, label=None, names=None, debug_mode=False):
     lines = source.splitlines()
     if '' in lines:
         lines.remove('')
@@ -81,42 +59,40 @@ def parser(source, label=None, names=None, debug=False):
     ast_top = []
     for line in lines:
         # NPC-Kalin(1)<Speaker>格琳</Speaker>||:“选择我们，加入我们！格里芬私人军事承包商，更新世界的锋芒！”+没错，从今天开始，您就是格里芬旗下的战术指挥官啦！
+        name = None
 
         head = line[:line.find(':')]
         text = line[line.find(':') + 1:]
-
         tag_head = head[head.find('||') + 2:]
-
-        name = None
-
         # Parse All tag by regex match
-        tags = [{'key': x.groups()[0], 'value': x.groups()[1]} for x in re.finditer('<(\\S+?)>(.+?)</\\1>', head)]
+        full_tags = re.finditer('<(\\S+?)>(.+?)</\\1>', head)
+        half_head = re.sub('<(\\S+?)>(.+?)</\\1>', "", head)
+        half_tags = re.finditer('<(\\S+?)>', half_head)
+
+        tags = [{'key': x.groups()[0], 'value': x.groups()[1], 'close': True} for x in full_tags]
+        tags.extend([{'key': x.groups()[0], 'value': None, 'close': False} for x in half_tags])
+
         for tag in tags:
             speakers = []
-
             match tag['key']:
                 case 'BGM':
                     bgm = patch.bgm_patcher(tag['value'])
                     if (path := tool.bgm_path_resolver.pl.fpath(bgm + '.wav')) is None:
                         path = 'musiclost.flac'
-                        set_append(f'LOST: {bgm}', debug_bgm)
+                        s_apd(f'LOST: {bgm}', debug_bgm)
                     else:
                         path = path.replace('\\', '/')
-                        set_append(path, debug_bgm)
-                    avg_text += f'play music \'{path}\'\n'
+                        s_apd(path, debug_bgm)
                     ast_map.append(ast.Statement(['play', 'music'], ast.Str(path)))
-                case 'SE1':
+                case 'SE1', 'SE2':
                     sound_fx = tag['value']
-                    avg_text += f"play sound 'audio/{sound_fx}.wav'\n"
-                    set_append(sound_fx, debug_sound_fx)
+                    s_apd(sound_fx, debug_sound_fx)
                     path = f'audio/{sound_fx}.wav'
                     ast_map.append(ast.Statement(['play', 'sound'], ast.Str(path)))
                 case 'BIN':
                     bg_result = tag['value']
                     bg_img = IMG[int(bg_result.replace(' ', ''))]
                     bg_code_name = f'i_{to_codename(bg_img)}'
-                    # bg_render = SHOW_BG % (bg_code_name, bg_img + '.png', bg_code_name)
-                    avg_text += show_bg(bg_img + '.png', bg_code_name)
 
                     ast_map.append(ast.Assign(f'i_{to_codename(bg_img)}', 'image', f'images/{bg_img}.png'))
                     ast_map.append(ast.Statement(['scene'], bg_code_name))
@@ -124,29 +100,33 @@ def parser(source, label=None, names=None, debug=False):
                     name = tag['value']
                     if name.isspace():
                         name = None
+                    elif name is None:
+                        pass
                     elif name not in names.keys():
                         code_name = to_codename(name)
                         names[name] = code_name
-                        set_append(name, debug_names)
+                        s_apd(name, debug_names)
                         speakers.append(code_name)
                         ast_top.append(ast.Assign(code_name, 'define', ast.Func('Character', name)))
-        # Character # TODO
-        # char_head = head[:head.find('||')]
-        # char_head = re.sub('<(\\S+?)>.+?</\\1>', '', char_head)
-        # char_head = re.sub('<\\S+?>', '', char_head)
-        # char_list = [x.strip() for x in char_head.split(';')]
-        # chars = {}
-        # for x in char_list:
-        #     if re.match('\\(\\S*\\)', x):
-        #         continue
-        #     r = re.search('(.*?)\\((\\d*?)\\)', x)
-        #     chars[r.groups()[0]] = r.groups()[1]
-        # for char in char_list:
-        #     set_append(char, debug_chars)
-        # img = r'\S+?\(\d+?\)'
+                # TODO
+                case '通讯框':
+                    pass
+                case 'Grey':
+                    pass
+                case 'Shake':
+                    pass
+                case 'Position':
+                    pass
+                case '回忆':
+                    pass
+                case '关闭蒙版':
+                    pass
+                case '名单', '名单2':
+                    pass
+
+        # TODO Character Portrait
 
         # Convert color tag
-        # if re.search('<(color)=#\\S+?>(.*?)</\\1>', text):
         for r in re.finditer('<color=#(\\S+?)>', text):
             text = text.replace(r.group(), f'{{color=#{r.groups()[0]}}}')
             text = text.replace('</color>', '{/color}')
@@ -165,15 +145,9 @@ def parser(source, label=None, names=None, debug=False):
             #     last_chars = ''
             if name is None or text_unit == '':
                 ast_map.append(ast.Text(text_unit))
-                avg_text += f"'{text_unit}'\n"
                 # avg_text += f"play sound '{tool.bgm_path_resolver.UI_ObjDown}'\n"
             elif text_unit != '':
                 ast_map.append(ast.Text(text_unit, character=names[name]))
-                avg_text += f"{names[name]} '{text_unit}'\n"
-                # avg_text += f"play sound '{tool.bgm_path_resolver.UI_ObjDown}'\n"
-            # elif text_unit == '':
-            #     ast_map.append(ast.Text(text_unit))
-            #     avg_text += "''\n"
     ast_top.append(ast.Block('label', label, ast_map))
     result = ast.ast2rpy(ast_top)
     return result
@@ -184,9 +158,7 @@ if __name__ == '__main__':
     # import time
     # t = time.time()
     mp = ast.Block('label', 'start', calls := [])
-
-    # with open('rpy/script.rpy', 'w') as f:
-    #     f.write('label start:\n')
+    debug = True
 
 
     def generate_avg_level(chapter, level, part):
@@ -195,35 +167,34 @@ if __name__ == '__main__':
             s = file.read()
 
         label_name = 's' + file_name.replace('-', '_')
-        avg = parser(s, label=label_name, debug=True)
+        avg_rpy_text = parser(s, label_name, debug_mode=True)
         with open(f'rpy/{label_name}.rpy', 'w', encoding='utf-8') as file:
-            file.write(avg)
-        print(avg)
-        # with open('rpy/script.rpy', 'a+') as file:
-        #     file.write(' ' * 4 + f'call {label_name}\n')
+            file.write(avg_rpy_text)
+        print(avg_rpy_text)
         calls.append(ast.Statement('call', label_name))
 
 
     # Chapter 1~12, level 1~6, part 1~2
-    i, ii, iii = 1, 1, 1
+    chapter_, level_, part_ = 1, 1, 1
     while True:
-        generate_avg_level(i, ii, iii)
-        if (iii := iii + 1) > 2:
-            iii = 1
-            if (ii := ii + 1) > 6:
-                ii = 1
-                if (i := i + 1) > 12:
+        generate_avg_level(chapter_, level_, part_)
+        if (part_ := part_ + 1) > 2:
+            part_ = 1
+            if (level_ := level_ + 1) > 6:
+                level_ = 1
+                if (chapter_ := chapter_ + 1) > 12:
                     break
     with open('rpy/script.rpy', 'w') as f:
         f.write(ast.ast2rpy(mp))
 
-    # Write debug info
-    with open('debug/bgm.txt', 'w') as f:
-        f.write('\n'.join(debug_bgm))
-    with open('debug/sound_fx.txt', 'w') as f:
-        f.write('\n'.join(debug_sound_fx))
-    with open('debug/names.txt', 'w', encoding='utf-8') as f:
-        f.write('\n'.join(debug_names))
-    with open('debug/chars.txt', 'w', encoding='utf-8') as f:
-        f.write('\n'.join(debug_chars))
+    if debug:
+        # Write debug info
+        with open('debug/bgm.txt', 'w') as f:
+            f.write('\n'.join(debug_bgm))
+        with open('debug/sound_fx.txt', 'w') as f:
+            f.write('\n'.join(debug_sound_fx))
+        with open('debug/names.txt', 'w', encoding='utf-8') as f:
+            f.write('\n'.join(debug_names))
+        with open('debug/chars.txt', 'w', encoding='utf-8') as f:
+            f.write('\n'.join(debug_chars))
     # print(time.time() - t)
