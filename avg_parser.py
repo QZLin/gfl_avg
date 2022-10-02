@@ -1,9 +1,8 @@
 import keyword
 import re
-from re import search, match
 
 import patch
-import tool.bgm_path_resolver
+import tool.bgm_path_resolver as bgmr
 from profiles import IMG  # !!!Run profiles_gen.py once to generate profiles.py
 import ast_rpy as ast
 
@@ -11,7 +10,7 @@ import ast_rpy as ast
 def is_codename(name):  # TODO
     if len(name) == 0:
         return False
-    if name[0] != '_' or match('', name[0]) is None:
+    if name[0] != '_' or re.match('', name[0]) is None:
         return False
     if name in ['+', '-', '*', '/', '\\']:
         return False
@@ -23,7 +22,6 @@ codename_map = str.maketrans(m := r'\\ ~#%&*.{}/:;()<>?|"\-\[\]\'', '_' * len(m)
 def to_codename(origin_name: str):
     if origin_name.isspace():
         origin_name = f'SPACE_{origin_name.count(" ")}'
-    # name = re.sub(r'[\\ ~#%&*.{}/:;()<>?|"\-\[\]\']', "_", origin_name)
     name = origin_name.translate(codename_map)
     if keyword.iskeyword(name) or name in dir(__builtins__):
         name = f'{name}_{str(hash(origin_name)).replace("-", "_")}'
@@ -47,12 +45,12 @@ def s_apd(value, list_: list):
         list_.append(value)
 
 
-def parser(source, label=None, names=None, debug_mode=False):
+def parser(source, label=None):
     lines = source.splitlines()
     if '' in lines:
         lines.remove('')
-    if names is None:
-        names = {}
+    name_cname = {}
+    cname_name = {}
     speaker_status = {}
 
     ast_map = [ast.Statement(['stop', 'sound'])]
@@ -72,12 +70,12 @@ def parser(source, label=None, names=None, debug_mode=False):
         tags = [{'key': x.groups()[0], 'value': x.groups()[1], 'close': True} for x in full_tags]
         tags.extend([{'key': x.groups()[0], 'value': None, 'close': False} for x in half_tags])
 
+        speakers = []
         for tag in tags:
-            speakers = []
             match tag['key']:
                 case 'BGM':
                     bgm = patch.bgm_patcher(tag['value'])
-                    if (path := tool.bgm_path_resolver.pl.fpath(bgm + '.wav')) is None:
+                    if (path := bgmr.pl.fpath(bgm + '.wav')) is None:
                         path = 'musiclost.flac'
                         s_apd(f'LOST: {bgm}', debug_bgm)
                     else:
@@ -98,16 +96,15 @@ def parser(source, label=None, names=None, debug_mode=False):
                     ast_map.append(ast.Statement(['scene'], bg_code_name))
                 case 'Speaker':
                     name = tag['value']
-                    if name.isspace():
-                        name = None
-                    elif name is None:
-                        pass
-                    elif name not in names.keys():
-                        code_name = to_codename(name)
-                        names[name] = code_name
+                    if name is None or name.isspace():
+                        break
+                    code_name = to_codename(name)
+                    if name not in name_cname.keys():
+                        name_cname[name] = code_name
+                        cname_name[code_name] = name
                         s_apd(name, debug_names)
-                        speakers.append(code_name)
                         ast_top.append(ast.Assign(code_name, 'define', ast.Func('Character', name)))
+                    speakers.append(code_name)
                 # TODO
                 case '通讯框':
                     pass
@@ -127,27 +124,25 @@ def parser(source, label=None, names=None, debug_mode=False):
         # TODO Character Portrait
 
         # Convert color tag
-        for r in re.finditer('<color=#(\\S+?)>', text):
+        for r in re.finditer('<color=#(\\S+?)>', text := text.replace('</color>', '{/color}')):
             text = text.replace(r.group(), f'{{color=#{r.groups()[0]}}}')
-            text = text.replace('</color>', '{/color}')
 
+        if len(speakers) > 1:
+            combined_spk = '_'.join(speakers)
+            combined_spk_display = ' & '.join([cname_name[x] for x in speakers])
+            ast_top.append(ast.Assign(combined_spk, 'define', ast.Func('Character', combined_spk_display)))
+            s_apd(combined_spk, debug_names)
+
+        else:
+            combined_spk = None
         # Text
-        last_chars = ''
         for text_unit in text.split('+'):
-            # if len(chars.keys()) != 0:
-            #     current_chars = ';'.join([f'{k}:{v}' for k, v in chars.items()])
-            #     if current_chars != last_chars:
-            #         for char in chars:
-            #             ast_map.append(ast.Statement(['show', f'{to_codename(char)}_{chars[char]}']))
-            #             avg_text += f'show {to_codename(char)}_{chars[char]}\n'
-            #         last_chars = current_chars
-            # else:
-            #     last_chars = ''
-            if name is None or text_unit == '':
+            if len(speakers) == 1:
+                ast_map.append(ast.Text(text_unit, character=speakers[0]))
+            elif len(speakers) > 1:
+                ast_map.append(ast.Text(text_unit, character=combined_spk))
+            else:
                 ast_map.append(ast.Text(text_unit))
-                # avg_text += f"play sound '{tool.bgm_path_resolver.UI_ObjDown}'\n"
-            elif text_unit != '':
-                ast_map.append(ast.Text(text_unit, character=names[name]))
     ast_top.append(ast.Block('label', label, ast_map))
     result = ast.ast2rpy(ast_top)
     return result
@@ -167,7 +162,7 @@ if __name__ == '__main__':
             s = file.read()
 
         label_name = 's' + file_name.replace('-', '_')
-        avg_rpy_text = parser(s, label_name, debug_mode=True)
+        avg_rpy_text = parser(s, label_name)
         with open(f'rpy/{label_name}.rpy', 'w', encoding='utf-8') as file:
             file.write(avg_rpy_text)
         print(avg_rpy_text)

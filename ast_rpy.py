@@ -72,17 +72,17 @@ def stmt(*e):
     return ' '.join([str(x) for x in e if x is not None])
 
 
-def ast2rpy(ast_map, endl='\n'):
+def ast2rpy(ast_map, end='\n'):
     """
     Normal AST parser
-    :param endl:
+    :param end:
     :param ast_map:
     :return:
     """
     if type(ast_map) == Block:
         return block2rpy(ast_map)
     else:
-        return '\n'.join(_ast2rpy(x) for x in ast_map) + endl
+        return '\n'.join(_ast2rpy(x) for x in ast_map) + end
 
 
 def block2rpy(block):
@@ -96,7 +96,7 @@ def block2rpy(block):
     if block.child is not None:
         for x in block.child:
             x.indent += 1
-    rpy_script += ast2rpy(block.child, endl='')
+    rpy_script += ast2rpy(block.child, end='')
     return rpy_script
 
 
